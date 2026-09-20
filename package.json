@@ -1,11 +1,13 @@
 {
   "name": "node-kafka-ms",
   "version": "1.0.0",
-  "main": "index.js",
-  "type":"module",
+  "description": "An interactive Kafka simulator and live KafkaJS learning lab",
+  "main": "src/index.js",
+  "type": "module",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon --watch src --exec node src/index.js"
+    "dev": "nodemon --watch src --watch public --exec node src/index.js",
+    "check": "node --check src/index.js && node --check src/config.js && node --check src/kafka-service.js && node --check public/app.js"
   },
   "author": "",
   "license": "ISC",

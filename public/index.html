@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="An interactive Kafka simulator and live KafkaJS playground."
+    />
+    <title>Kafka Lab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/app.js" type="module"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="brand" href="#simulator" aria-label="Kafka Lab home">
+        <span class="brand-mark" aria-hidden="true">
+          <i></i><i></i><i></i>
+        </span>
+        <span>Kafka Lab</span>
+      </a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <button class="nav-button active" data-view="simulator">Simulator</button>
+        <button class="nav-button" data-view="live">Live Kafka</button>
+        <button class="nav-button" data-view="learn">Learn</button>
+      </nav>
+      <div class="connection-state" id="header-status">
+        <span class="status-dot"></span>
+        <span>Simulator ready</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="view active" id="simulator-view" aria-labelledby="simulator-title">
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Interactive model</p>
+            <h1 id="simulator-title">See a record travel through Kafka</h1>
+            <p>Change the topology, produce records, and observe what Kafka guarantees.</p>
+          </div>
+          <button class="button secondary" id="reset-simulation">Reset simulation</button>
+        </div>
+
+        <div class="metrics" aria-label="Simulation metrics">
+          <article><span>Produced</span><strong id="produced-count">0</strong></article>
+          <article><span>Consumed</span><strong id="consumed-count">0</strong></article>
+          <article><span>Consumer lag</span><strong id="lag-count">0</strong></article>
+        </div>
+
+        <section class="control-bar" aria-label="Simulation configuration">
+          <label>
+            Partitions
+            <select id="partition-count">
+              <option>1</option><option>2</option><option selected>3</option><option>4</option>
+            </select>
+          </label>
+          <label>
+            Consumers
+            <select id="consumer-count">
+              <option>1</option><option selected>2</option><option>3</option><option>4</option>
+            </select>
+          </label>
+          <label class="grow">
+            Message value
+            <input id="message-value" value="order-created" maxlength="40" />
+          </label>
+          <label class="grow">
+            Message key <span>(optional)</span>
+            <input id="message-key" value="customer-42" maxlength="40" />
+          </label>
+          <button class="button primary" id="produce-message">Produce</button>
+        </section>
+
+        <section class="topology" aria-label="Kafka topology">
+          <article class="topology-node producer-node">
+            <div class="node-icon">P</div>
+            <p class="node-label">Producer</p>
+            <strong>orders-api</strong>
+            <small>Chooses a partition</small>
+          </article>
+
+          <div class="flow-arrow">
+            <span>produce()</span>
+            <i></i>
+          </div>
+
+          <article class="topic-node">
+            <div class="topic-heading">
+              <div>
+                <p class="node-label">Topic</p>
+                <strong>orders</strong>
+              </div>
+              <span class="tag" id="partition-label">3 partitions</span>
+            </div>
+            <div class="partition-list" id="partition-list"></div>
+          </article>
+
+          <div class="flow-arrow">
+            <span>poll()</span>
+            <i></i>
+          </div>
+
+          <article class="consumer-group-node">
+            <div class="topic-heading">
+              <div>
+                <p class="node-label">Consumer group</p>
+                <strong>payments</strong>
+              </div>
+              <span class="tag success" id="group-state">stable</span>
+            </div>
+            <div class="consumer-list" id="consumer-list"></div>
+          </article>
+        </section>
+
+        <div class="simulation-actions">
+          <button class="button secondary" id="consume-next">Consume next</button>
+          <button class="button secondary" id="toggle-auto">Start auto-consume</button>
+          <button class="button danger" id="toggle-crash">Crash consumer 1</button>
+        </div>
+
+        <section class="explanation" aria-live="polite">
+          <div class="explanation-number" id="explanation-number">01</div>
+          <div>
+            <p class="eyebrow">What just happened?</p>
+            <h2 id="explanation-title">Kafka is an append-only log</h2>
+            <p id="explanation-copy">
+              Produce a record. Kafka will append it to one partition and assign an increasing offset.
+            </p>
+          </div>
+        </section>
+      </section>
+
+      <section class="view" id="live-view" aria-labelledby="live-title" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Real KafkaJS connection</p>
+            <h1 id="live-title">Run the same experiment on Kafka</h1>
+            <p>The app stays usable when Kafka is offline. Connect when your Docker broker is ready.</p>
+          </div>
+          <button class="button primary" id="connect-kafka">Connect Kafka</button>
+        </div>
+
+        <div class="live-grid">
+          <section class="panel cluster-panel">
+            <div class="panel-heading">
+              <div><p class="eyebrow">Cluster</p><h2>Connection</h2></div>
+              <span class="tag" id="live-status">offline</span>
+            </div>
+            <dl class="detail-list">
+              <div><dt>Broker</dt><dd id="live-broker">localhost:9092</dd></div>
+              <div><dt>Topic</dt><dd id="live-topic">kafka-lab-events</dd></div>
+              <div><dt>Consumer group</dt><dd id="live-group">kafka-lab-learners</dd></div>
+            </dl>
+            <p class="inline-message" id="connection-message">
+              Start Kafka with Docker, then connect from here.
+            </p>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading"><div><p class="eyebrow">Producer</p><h2>Send a real record</h2></div></div>
+            <form id="live-producer-form">
+              <label>Value<input id="live-value" value="hello from Kafka Lab" required /></label>
+              <label>Key <span>(optional)</span><input id="live-key" value="demo-key" /></label>
+              <button class="button primary" type="submit">Send record</button>
+            </form>
+          </section>
+        </div>
+
+        <section class="panel event-panel">
+          <div class="panel-heading">
+            <div><p class="eyebrow">Consumer</p><h2>Incoming records</h2></div>
+            <button class="text-button" id="clear-events">Clear</button>
+          </div>
+          <div class="event-head"><span>Partition / offset</span><span>Key</span><span>Value</span><span>Time</span></div>
+          <div class="event-list" id="event-list">
+            <p class="empty-state">No records consumed in this browser session.</p>
+          </div>
+        </section>
+      </section>
+
+      <section class="view" id="learn-view" aria-labelledby="learn-title" hidden>
+        <div class="page-heading learn-heading">
+          <div>
+            <p class="eyebrow">Six short lessons</p>
+            <h1 id="learn-title">Kafka, from first principles</h1>
+            <p>Read a concept, then reproduce it in the simulator.</p>
+          </div>
+        </div>
+        <div class="lesson-layout">
+          <nav class="lesson-nav" aria-label="Kafka lessons" id="lesson-nav"></nav>
+          <article class="lesson-content" id="lesson-content"></article>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
