@@ -1,63 +1,85 @@
 # Kafka Lab
 
-Kafka Lab is an interactive way to learn Kafka with Node.js. It contains:
+Kafka Lab is an interactive Kafka learning project built with Node.js,
+Express, and KafkaJS. It helps beginners understand Kafka visually before
+trying the same concepts against a real local Kafka broker.
 
-- A browser simulator that works without a Kafka broker
-- A real KafkaJS producer and consumer
-- Visual partitions, offsets, consumer ownership, and lag
-- Consumer crash and group-rebalance experiments
-- Six short lessons connected to hands-on exercises
+## What the project includes
 
-## What the simulator teaches
+- An interactive producer, topic, partition, and consumer-group simulator
+- Visual message keys, offsets, committed positions, and consumer lag
+- Configurable partition and consumer counts
+- Consumer failure and group-rebalance experiments
+- 18 detailed Kafka learning chapters with practical exercises
+- A real KafkaJS producer and consumer for local experimentation
+- A single-node Kafka 3.7.1 KRaft environment using Docker Compose
 
-The simulator models the core Kafka rules:
+The simulator works without Kafka. The **Live Kafka** section connects to the
+local Docker broker and lets you publish and consume real records.
 
-1. A topic is split into ordered partitions.
-2. Every record receives an offset within its partition.
-3. A key consistently routes related records to one partition.
-4. Consumers in one group divide partition ownership.
-5. Consumer progress is stored as committed offsets.
-6. Consumer lag is the difference between available and processed records.
-7. When a consumer fails, the group rebalances its partitions.
+## Prerequisites
 
-The simulation deliberately focuses on these concepts. It is not a replacement
-for a real broker and does not model replication, retention, or delivery failures.
+- Node.js 20 or newer
+- npm
+- Docker Desktop or another Docker installation, only for Live Kafka
 
-## Run the simulator
+## Install the project
 
 ```sh
+git clone https://github.com/rakshitnayak/node-kafka-ms.git
+cd node-kafka-ms
 npm install
+cp .env.example .env
+```
+
+## Run the simulator and learning guide
+
+Kafka is not required for the simulator or documentation:
+
+```sh
 npm start
 ```
 
-Open <http://localhost:3000>. The **Simulator** and **Learn** sections work even
-when Kafka is not running.
+Open <http://localhost:3000> and use the **Simulator** and **Learn** tabs.
 
-## Run with a real Kafka broker
+For automatic restarts while editing:
 
-Start the included single-node KRaft broker:
+```sh
+npm run dev
+```
+
+## Run with real Kafka
+
+Start the included broker:
 
 ```sh
 docker compose up -d
+```
+
+Start Kafka Lab:
+
+```sh
 npm start
 ```
 
-Open <http://localhost:3000>, choose **Live Kafka**, and click **Connect Kafka**.
-The server creates `kafka-lab-events`, starts a KafkaJS producer, and starts a
-consumer in the `kafka-lab-learners` group.
+Open <http://localhost:3000>, choose **Live Kafka**, click **Connect Kafka**,
+and send a record. The application creates the configured topic, starts a
+KafkaJS producer, and starts a consumer in the configured consumer group.
 
-Live Kafka is intentionally disabled on Vercel in Phase 1 because a Kafka
-consumer requires an always-on process. Local development retains the complete
-producer, consumer, and event-stream experience. The deployed simulator and
-lessons do not require Kafka.
+Inspect the Kafka container:
 
-Stop Kafka without deleting its records:
+```sh
+docker compose ps
+docker compose logs -f kafka
+```
+
+Stop Kafka while preserving its data:
 
 ```sh
 docker compose stop
 ```
 
-To remove the broker and its learning data:
+Remove Kafka and the local learning data volume:
 
 ```sh
 docker compose down -v
@@ -65,7 +87,7 @@ docker compose down -v
 
 ## Configuration
 
-Copy `.env.example` to `.env` and change values when necessary:
+The default `.env.example` contains:
 
 ```dotenv
 PORT=3000
@@ -76,56 +98,34 @@ GROUP_ID=kafka-lab-learners
 TOPIC_PARTITIONS=3
 ```
 
+Copy it to `.env` before changing local values. `.env` is ignored by Git.
+
 ## Project structure
 
 ```text
 public/
-  index.html          Browser UI
+  index.html          Application screens and controls
   styles.css          Responsive visual design
-  app.js              Simulator, lessons, and live event rendering
+  app.js              Simulator and browser behavior
+  lessons.js          Kafka learning curriculum
 src/
+  app.js              Express routes and application export
   config.js           Environment configuration
-  kafka-service.js    KafkaJS admin, producer, consumer, and event stream
-  index.js            Express server and HTTP API
+  index.js            Local HTTP server and graceful shutdown
+  kafka-service.js    KafkaJS admin, producer, and consumer
+test/
+  local-app.test.js   Local-mode behavior
+  vercel-app.test.js  Serverless-mode behavior
 docker-compose.yml    Local single-node Kafka broker
 ```
 
-## Learning path
-
-1. Use the simulator without keys and observe round-robin partitioning.
-2. Reuse one key and verify that its records stay in one partition.
-3. Produce faster than you consume and watch lag increase.
-4. Add more consumers than partitions and observe idle consumers.
-5. Crash a consumer and observe partition reassignment.
-6. Repeat the experiment in Live Kafka and inspect actual offsets.
-
-## Useful commands
+## Checks
 
 ```sh
 npm run check
 npm test
-npm run dev
-docker compose logs -f kafka
 ```
 
-## Deploy the Phase 1 simulator to Vercel
-
-Vercel detects `src/app.js` as an Express application and serves files in
-`public/` through its CDN. `vercel.json` redirects the root URL to the CDN-served
-`index.html`:
-
-```sh
-vercel
-```
-
-No Kafka credentials are required for Phase 1. The deployment health endpoint
-reports `features.liveKafka: false`, and the UI clearly marks Live Kafka as a
-Phase 2 feature. For production, promote a tested preview with:
-
-```sh
-vercel --prod
-```
-
-The Docker setup uses one broker and replication factor 1 for learning. A
-production Kafka cluster needs multiple brokers, replication, security,
-monitoring, and a deliberate retry and delivery-semantics strategy.
+The Docker environment uses one broker and replication factor 1 for learning.
+It is not a production Kafka cluster and cannot demonstrate broker failover or
+replica durability by itself.

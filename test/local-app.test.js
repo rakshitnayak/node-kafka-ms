@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import app from "../src/app.js";
+import { lessons } from "../public/lessons.js";
 
 const routeHandler = (path, method) =>
   app._router.stack.find(
@@ -37,4 +38,17 @@ test("public application contains the simulator and lessons", async () => {
   assert.match(html, /Kafka Lab/);
   assert.match(html, /id="simulator-view"/);
   assert.match(html, /id="learn-view"/);
+});
+
+test("learning curriculum covers Kafka from fundamentals to operations", () => {
+  assert.equal(lessons.length, 18);
+  assert.equal(lessons[0].title, "Why Kafka exists");
+  assert.equal(lessons.at(-1).title, "Putting it together with KafkaJS");
+
+  for (const lesson of lessons) {
+    assert.ok(lesson.summary.length > 80, `${lesson.title} needs a detailed summary`);
+    assert.ok(lesson.sections.length >= 3, `${lesson.title} needs three sections`);
+    assert.ok(lesson.keyPoints.length >= 3, `${lesson.title} needs key takeaways`);
+    assert.ok(lesson.task, `${lesson.title} needs a practical exercise`);
+  }
 });

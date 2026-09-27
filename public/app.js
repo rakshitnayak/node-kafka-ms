@@ -1,50 +1,7 @@
+import { lessons } from "./lessons.js";
+
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-
-const lessons = [
-  {
-    title: "The mental model",
-    eyebrow: "01 · Record log",
-    copy: "Kafka is a distributed, append-only log. Producers append records to topics; consumers independently remember how far they have read. Kafka keeps records for a configured retention period instead of deleting them after one consumer reads them.",
-    diagram: ["Producer", "Topic log", "Consumer"],
-    task: "Produce three records, consume only one, and watch lag become 2. The records remain visible after consumption.",
-  },
-  {
-    title: "Topics and partitions",
-    eyebrow: "02 · Parallel logs",
-    copy: "A topic is split into partitions. Each partition is its own ordered log, with offsets starting at 0. Kafka guarantees order inside one partition—not across the whole topic. More partitions allow more parallel consumers.",
-    diagram: ["Topic", "P0: 0 → 1 → 2", "P1: 0 → 1"],
-    task: "Choose three partitions and produce records without a key. They spread across partitions in round-robin order.",
-  },
-  {
-    title: "Keys preserve local order",
-    eyebrow: "03 · Routing",
-    copy: "When a record has a key, the producer hashes that key to choose a partition. Records with the same key therefore land in the same partition, preserving order for that entity—such as one customer or order.",
-    diagram: ["customer-42", "hash(key)", "Partition 1"],
-    task: "Produce several records with customer-42, then change the key. Same-key records stay together.",
-  },
-  {
-    title: "Offsets and consumer lag",
-    eyebrow: "04 · Progress",
-    copy: "An offset is a record’s position in one partition. A consumer group commits offsets to remember its progress. Lag is the distance between the newest available offsets and the group’s committed offsets.",
-    diagram: ["Committed: 2", "Records: 3, 4, 5", "Lag: 3"],
-    task: "Produce five records and consume them one at a time. Notice the next offset and lag change independently per partition.",
-  },
-  {
-    title: "Consumer groups scale work",
-    eyebrow: "05 · Parallelism",
-    copy: "Within one consumer group, a partition belongs to only one consumer at a time. That prevents duplicate processing inside the group. A group cannot usefully have more active consumers than partitions; extra consumers remain idle.",
-    diagram: ["P0 → C1", "P1 → C2", "P2 → C1"],
-    task: "Set two partitions and three consumers. The third consumer has no partition and becomes idle.",
-  },
-  {
-    title: "Failures trigger rebalancing",
-    eyebrow: "06 · Recovery",
-    copy: "When a consumer joins or leaves a group, Kafka reassigns partitions among the remaining consumers. This is a rebalance. Processing briefly pauses, then resumes from the group’s committed offsets.",
-    diagram: ["Consumer 1 fails", "Rebalance", "Consumer 2 owns all"],
-    task: "Create lag, crash consumer 1, and inspect how its partitions move to active consumers without losing their offsets.",
-  },
-];
 
 const simulation = {
   partitions: 3,
@@ -277,7 +234,12 @@ function renderLessons(activeIndex = 0) {
   lessons.forEach((lesson, index) => {
     const button = document.createElement("button");
     button.className = `lesson-button${index === activeIndex ? " active" : ""}`;
-    button.innerHTML = `<span>${String(index + 1).padStart(2, "0")}</span><span>${lesson.title}</span>`;
+    button.setAttribute("aria-current", index === activeIndex ? "step" : "false");
+    const number = document.createElement("span");
+    number.textContent = String(index + 1).padStart(2, "0");
+    const label = document.createElement("span");
+    label.textContent = lesson.title;
+    button.append(number, label);
     button.addEventListener("click", () => renderLessons(index));
     nav.append(button);
   });
@@ -290,8 +252,12 @@ function renderLessons(activeIndex = 0) {
   eyebrow.textContent = lesson.eyebrow;
   const title = document.createElement("h2");
   title.textContent = lesson.title;
-  const copy = document.createElement("p");
-  copy.textContent = lesson.copy;
+  const progress = document.createElement("p");
+  progress.className = "lesson-progress";
+  progress.textContent = `Lesson ${activeIndex + 1} of ${lessons.length}`;
+  const summary = document.createElement("p");
+  summary.className = "lesson-summary";
+  summary.textContent = lesson.summary;
   const diagram = document.createElement("div");
   diagram.className = "lesson-diagram";
   lesson.diagram.forEach((label, index) => {
@@ -304,6 +270,44 @@ function renderLessons(activeIndex = 0) {
     item.textContent = label;
     diagram.append(item);
   });
+
+  const sectionList = document.createElement("div");
+  sectionList.className = "lesson-sections";
+  lesson.sections.forEach((section) => {
+    const wrapper = document.createElement("section");
+    const heading = document.createElement("h3");
+    heading.textContent = section.title;
+    const body = document.createElement("p");
+    body.textContent = section.body;
+    wrapper.append(heading, body);
+    sectionList.append(wrapper);
+  });
+
+  const takeaway = document.createElement("section");
+  takeaway.className = "lesson-takeaways";
+  const takeawayTitle = document.createElement("h3");
+  takeawayTitle.textContent = "Key takeaways";
+  const takeawayList = document.createElement("ul");
+  lesson.keyPoints.forEach((point) => {
+    const item = document.createElement("li");
+    item.textContent = point;
+    takeawayList.append(item);
+  });
+  takeaway.append(takeawayTitle, takeawayList);
+
+  let codeExample = null;
+  if (lesson.code) {
+    codeExample = document.createElement("section");
+    codeExample.className = "lesson-code";
+    const codeTitle = document.createElement("h3");
+    codeTitle.textContent = lesson.code.title;
+    const pre = document.createElement("pre");
+    const code = document.createElement("code");
+    code.textContent = lesson.code.body;
+    pre.append(code);
+    codeExample.append(codeTitle, pre);
+  }
+
   const tryIt = document.createElement("div");
   tryIt.className = "try-it";
   const tryTitle = document.createElement("strong");
@@ -311,7 +315,26 @@ function renderLessons(activeIndex = 0) {
   const task = document.createElement("p");
   task.textContent = lesson.task;
   tryIt.append(tryTitle, task);
-  content.append(eyebrow, title, copy, diagram, tryIt);
+
+  const lessonActions = document.createElement("div");
+  lessonActions.className = "lesson-actions";
+  const previous = document.createElement("button");
+  previous.className = "button secondary";
+  previous.textContent = "Previous lesson";
+  previous.disabled = activeIndex === 0;
+  previous.addEventListener("click", () => renderLessons(activeIndex - 1));
+  const next = document.createElement("button");
+  next.className = "button primary";
+  next.textContent =
+    activeIndex === lessons.length - 1 ? "Back to lesson 1" : "Next lesson";
+  next.addEventListener("click", () =>
+    renderLessons(activeIndex === lessons.length - 1 ? 0 : activeIndex + 1),
+  );
+  lessonActions.append(previous, next);
+
+  content.append(eyebrow, progress, title, summary, diagram, sectionList);
+  if (codeExample) content.append(codeExample);
+  content.append(takeaway, tryIt, lessonActions);
 }
 
 function switchView(viewName) {
