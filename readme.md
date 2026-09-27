@@ -46,6 +46,11 @@ Open <http://localhost:3000>, choose **Live Kafka**, and click **Connect Kafka**
 The server creates `kafka-lab-events`, starts a KafkaJS producer, and starts a
 consumer in the `kafka-lab-learners` group.
 
+Live Kafka is intentionally disabled on Vercel in Phase 1 because a Kafka
+consumer requires an always-on process. Local development retains the complete
+producer, consumer, and event-stream experience. The deployed simulator and
+lessons do not require Kafka.
+
 Stop Kafka without deleting its records:
 
 ```sh
@@ -98,8 +103,27 @@ docker-compose.yml    Local single-node Kafka broker
 
 ```sh
 npm run check
+npm test
 npm run dev
 docker compose logs -f kafka
+```
+
+## Deploy the Phase 1 simulator to Vercel
+
+Vercel detects `src/app.js` as an Express application and serves files in
+`public/` through its CDN. `vercel.json` redirects the root URL to the CDN-served
+`index.html`:
+
+```sh
+vercel
+```
+
+No Kafka credentials are required for Phase 1. The deployment health endpoint
+reports `features.liveKafka: false`, and the UI clearly marks Live Kafka as a
+Phase 2 feature. For production, promote a tested preview with:
+
+```sh
+vercel --prod
 ```
 
 The Docker setup uses one broker and replication factor 1 for learning. A

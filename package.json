@@ -4,14 +4,17 @@
   "description": "An interactive Kafka simulator and live KafkaJS learning lab",
   "main": "src/index.js",
   "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon --watch src --watch public --exec node src/index.js",
-    "check": "node --check src/index.js && node --check src/config.js && node --check src/kafka-service.js && node --check public/app.js"
+    "check": "node --check src/index.js && node --check src/app.js && node --check src/config.js && node --check src/kafka-service.js && node --check public/app.js",
+    "test": "node --test"
   },
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "express": "^4.18.2",
     "kafkajs": "^2.2.4",

@@ -351,6 +351,19 @@ function setLiveState(state) {
   $("#header-status").innerHTML = `<span class="status-dot"></span><span>${connected ? "Kafka connected" : "Simulator ready"}</span>`;
 }
 
+function setLiveUnavailable(message) {
+  $("#live-status").textContent = "Phase 2";
+  $("#live-status").className = "tag";
+  $("#connect-kafka").disabled = true;
+  $("#connect-kafka").textContent = "Requires always-on worker";
+  $("#connection-message").textContent = message;
+  $$("#live-producer-form input, #live-producer-form button").forEach(
+    (control) => {
+      control.disabled = true;
+    },
+  );
+}
+
 function addLiveRecord(record) {
   const list = $("#event-list");
   $(".empty-state", list)?.remove();
@@ -389,18 +402,22 @@ async function connectKafka() {
 
 async function produceLiveRecord(event) {
   event.preventDefault();
-  const response = await fetch("/api/kafka/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      value: $("#live-value").value,
-      key: $("#live-key").value,
-    }),
-  });
-  const payload = await response.json();
-  $("#connection-message").textContent = response.ok
-    ? `Kafka acknowledged the record in P${payload[0].partition} at offset ${payload[0].offset}.`
-    : payload.error;
+  try {
+    const response = await fetch("/api/kafka/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        value: $("#live-value").value,
+        key: $("#live-key").value,
+      }),
+    });
+    const payload = await response.json();
+    $("#connection-message").textContent = response.ok
+      ? `Kafka acknowledged the record in P${payload[0].partition} at offset ${payload[0].offset}.`
+      : payload.error;
+  } catch (error) {
+    $("#connection-message").textContent = error.message;
+  }
 }
 
 function startEventStream() {
@@ -411,6 +428,26 @@ function startEventStream() {
   events.addEventListener("message", (event) => {
     addLiveRecord(JSON.parse(event.data).payload);
   });
+}
+
+async function initializeLiveMode() {
+  try {
+    const response = await fetch("/api/health");
+    const { kafka, features } = await response.json();
+    setLiveState(kafka);
+
+    if (features?.liveKafka) {
+      startEventStream();
+    } else {
+      setLiveUnavailable(
+        "The simulator and lessons are fully available. Live Kafka will return in Phase 2 with a persistent consumer worker.",
+      );
+    }
+  } catch {
+    setLiveUnavailable(
+      "The simulator works independently, but the deployment API is currently unavailable.",
+    );
+  }
 }
 
 $$('.nav-button').forEach((button) =>
@@ -431,8 +468,4 @@ $("#clear-events").addEventListener("click", () => {
 
 resetSimulation();
 renderLessons();
-startEventStream();
-fetch("/api/health")
-  .then((response) => response.json())
-  .then(({ kafka }) => setLiveState(kafka))
-  .catch(() => {});
+initializeLiveMode();

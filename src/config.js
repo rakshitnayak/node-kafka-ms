@@ -7,6 +7,7 @@ const numberFromEnv = (name, fallback) => {
 
 export const config = {
   port: numberFromEnv("PORT", 3000),
+  isVercel: process.env.VERCEL === "1",
   kafka: {
     clientId: process.env.KAFKA_CLIENT_ID || "kafka-lab",
     brokers: (process.env.KAFKA_BROKERS || "localhost:9092")
